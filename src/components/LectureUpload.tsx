@@ -1,9 +1,10 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, FileType, FilePlus, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, FileType, FilePlus, CheckCircle, AlertCircle, Loader2, Key } from 'lucide-react';
 import { toast } from 'sonner';
-import { transcribeVideo, generateSummary, processPdf } from '@/services/aiService';
+import { transcribeVideo, generateSummary, processPdf, isApiKeySet, setApiKey } from '@/services/aiService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 // Interface for processed lecture data
 interface ProcessedLecture {
@@ -25,6 +26,15 @@ const LectureUpload = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedData, setProcessedData] = useState<ProcessedLecture | null>(null);
   const [processingStage, setProcessingStage] = useState<string>('');
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [apiKey, setApiKeyState] = useState('');
+
+  // Check if API key is set on component mount
+  useEffect(() => {
+    if (!isApiKeySet()) {
+      setShowApiKeyDialog(true);
+    }
+  }, []);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -68,8 +78,23 @@ const LectureUpload = () => {
     toast.success('File selected successfully!');
   };
 
+  const handleApiKeySave = () => {
+    if (!apiKey.trim()) {
+      toast.error('Please enter a valid API key');
+      return;
+    }
+    
+    setApiKey(apiKey);
+    setShowApiKeyDialog(false);
+  };
+
   const handleUpload = async () => {
     if (!file) return;
+    
+    if (!isApiKeySet()) {
+      setShowApiKeyDialog(true);
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -172,6 +197,53 @@ const LectureUpload = () => {
   return (
     <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-6 text-center">Upload Lecture Material</h2>
+      
+      {/* API Key Dialog */}
+      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>OpenAI API Key Required</DialogTitle>
+            <DialogDescription>
+              To use the AI features for transcription and summarization, please enter your OpenAI API key.
+              This key will be stored locally in your browser.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={apiKey}
+              onChange={(e) => setApiKeyState(e.target.value)}
+              placeholder="sk-..."
+              type="password"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Your API key is stored only in your browser and is never sent to our servers.
+              Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAI</a>.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApiKeyDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApiKeySave}>
+              Save API Key
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* API Key Button */}
+      <div className="flex justify-end mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowApiKeyDialog(true)}
+          className="flex items-center gap-2"
+        >
+          <Key className="h-4 w-4" />
+          Set API Key
+        </Button>
+      </div>
       
       <div
         className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer min-h-[200px] transition-colors ${

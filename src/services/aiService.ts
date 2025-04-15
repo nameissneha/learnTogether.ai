@@ -2,7 +2,26 @@
 import { toast } from 'sonner';
 
 // API configuration
-const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"; // Replace with your actual API key or environment variable
+// Instead of hardcoding the API key, let's get it from environment variables or local storage
+const getApiKey = (): string => {
+  // Check for API key in localStorage first
+  const storedKey = localStorage.getItem('OPENAI_API_KEY');
+  if (storedKey) return storedKey;
+  
+  // Return empty string if no key is found
+  return "";
+};
+
+// Function to check if API key is set
+export const isApiKeySet = (): boolean => {
+  return !!getApiKey();
+};
+
+// Function to set API key
+export const setApiKey = (key: string): void => {
+  localStorage.setItem('OPENAI_API_KEY', key);
+  toast.success('API key saved successfully');
+};
 
 // Interface for transcription response
 interface TranscriptionResponse {
@@ -23,6 +42,12 @@ interface SummaryResponse {
 // Function to transcribe video
 export const transcribeVideo = async (file: File): Promise<string> => {
   try {
+    const apiKey = getApiKey();
+    
+    if (!apiKey) {
+      throw new Error('API key not set. Please set your OpenAI API key first.');
+    }
+    
     // For large files, we need to stream or use a chunking approach
     // This is a simplified implementation
     const formData = new FormData();
@@ -32,7 +57,7 @@ export const transcribeVideo = async (file: File): Promise<string> => {
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: formData,
     });
@@ -46,7 +71,7 @@ export const transcribeVideo = async (file: File): Promise<string> => {
     return data.text;
   } catch (error) {
     console.error('Transcription error:', error);
-    toast.error('Failed to transcribe video. Please try again.');
+    toast.error(error instanceof Error ? error.message : 'Failed to transcribe video. Please try again.');
     throw error;
   }
 };
@@ -54,11 +79,17 @@ export const transcribeVideo = async (file: File): Promise<string> => {
 // Function to generate summary from transcription
 export const generateSummary = async (transcription: string): Promise<SummaryResponse> => {
   try {
+    const apiKey = getApiKey();
+    
+    if (!apiKey) {
+      throw new Error('API key not set. Please set your OpenAI API key first.');
+    }
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -93,7 +124,7 @@ export const generateSummary = async (transcription: string): Promise<SummaryRes
     };
   } catch (error) {
     console.error('Summary generation error:', error);
-    toast.error('Failed to generate summary. Please try again.');
+    toast.error(error instanceof Error ? error.message : 'Failed to generate summary. Please try again.');
     throw error;
   }
 };
@@ -104,4 +135,3 @@ export const processPdf = async (file: File): Promise<string> => {
   // For now, return a message
   return "PDF processing would be implemented here with a PDF parsing library or API.";
 };
-
