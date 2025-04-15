@@ -1,14 +1,30 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, FileType, FilePlus, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileType, FilePlus, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { transcribeVideo, generateSummary, processPdf } from '@/services/aiService';
+
+// Interface for processed lecture data
+interface ProcessedLecture {
+  transcription: string;
+  summary: string;
+  keyPoints: string[];
+  codeSnippets?: {
+    code: string;
+    explanation: string;
+    language: string;
+  }[];
+}
 
 const LectureUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedData, setProcessedData] = useState<ProcessedLecture | null>(null);
+  const [processingStage, setProcessingStage] = useState<string>('');
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -52,24 +68,95 @@ const LectureUpload = () => {
     toast.success('File selected successfully!');
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
 
     setIsUploading(true);
     setUploadProgress(0);
+    setProcessedData(null);
 
     // Simulate upload progress
     const interval = setInterval(() => {
       setUploadProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
-          setIsUploading(false);
-          toast.success('File uploaded successfully! AI is processing your lecture.');
           return 100;
         }
         return prev + 5;
       });
     }, 200);
+
+    // Once upload is "complete", start processing
+    setTimeout(async () => {
+      clearInterval(interval);
+      setIsUploading(false);
+      setUploadProgress(100);
+      
+      // Begin processing with AI
+      try {
+        setIsProcessing(true);
+        
+        // Process based on file type
+        if (file.type.includes('video')) {
+          await processVideo(file);
+        } else if (file.type.includes('pdf')) {
+          await processPdfFile(file);
+        }
+        
+        setIsProcessing(false);
+        toast.success('Processing complete! View your lecture summary below.');
+      } catch (error) {
+        console.error('Processing error:', error);
+        setIsProcessing(false);
+        toast.error('An error occurred during processing. Please try again.');
+      }
+    }, 2000);
+  };
+
+  const processVideo = async (videoFile: File) => {
+    try {
+      // Step 1: Transcribe the video
+      setProcessingStage('Transcribing video...');
+      const transcription = await transcribeVideo(videoFile);
+      
+      // Step 2: Generate summary with AI
+      setProcessingStage('Generating insights with AI...');
+      const summaryData = await generateSummary(transcription);
+      
+      // Set processed data
+      setProcessedData({
+        transcription,
+        summary: summaryData.summary,
+        keyPoints: summaryData.keyPoints,
+        codeSnippets: summaryData.codeSnippets
+      });
+    } catch (error) {
+      console.error('Video processing error:', error);
+      throw error;
+    }
+  };
+
+  const processPdfFile = async (pdfFile: File) => {
+    try {
+      // Process PDF file
+      setProcessingStage('Extracting text from PDF...');
+      const pdfText = await processPdf(pdfFile);
+      
+      // Generate summary
+      setProcessingStage('Generating insights with AI...');
+      const summaryData = await generateSummary(pdfText);
+      
+      // Set processed data
+      setProcessedData({
+        transcription: pdfText,
+        summary: summaryData.summary,
+        keyPoints: summaryData.keyPoints,
+        codeSnippets: summaryData.codeSnippets
+      });
+    } catch (error) {
+      console.error('PDF processing error:', error);
+      throw error;
+    }
   };
 
   const getFileIcon = () => {
@@ -129,14 +216,60 @@ const LectureUpload = () => {
                 Uploading... {uploadProgress}%
               </p>
             </>
+          ) : isProcessing ? (
+            <div className="flex flex-col items-center justify-center py-4">
+              <Loader2 className="h-8 w-8 text-academic-blue animate-spin mb-2" />
+              <p className="text-center text-academic-gray">{processingStage}</p>
+            </div>
           ) : (
             <Button 
               className="w-full bg-academic-blue hover:bg-academic-light-blue"
               onClick={handleUpload}
             >
-              Start Upload
+              Start Upload & Process
             </Button>
           )}
+        </div>
+      )}
+
+      {processedData && (
+        <div className="mt-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+          <h3 className="text-xl font-semibold mb-4">Lecture Summary</h3>
+          
+          <div className="mb-4">
+            <h4 className="font-medium text-academic-blue mb-2">Summary</h4>
+            <p className="text-academic-gray">{processedData.summary}</p>
+          </div>
+          
+          <div className="mb-4">
+            <h4 className="font-medium text-academic-blue mb-2">Key Points</h4>
+            <ul className="list-disc pl-5 space-y-1">
+              {processedData.keyPoints.map((point, index) => (
+                <li key={index} className="text-academic-gray">{point}</li>
+              ))}
+            </ul>
+          </div>
+          
+          {processedData.codeSnippets && processedData.codeSnippets.length > 0 && (
+            <div>
+              <h4 className="font-medium text-academic-blue mb-2">Code Snippets</h4>
+              {processedData.codeSnippets.map((snippet, index) => (
+                <div key={index} className="mb-4 bg-gray-100 p-4 rounded">
+                  <p className="text-sm font-medium text-academic-gray mb-2">{snippet.language}</p>
+                  <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm overflow-x-auto">
+                    {snippet.code}
+                  </pre>
+                  <p className="mt-2 text-academic-gray text-sm">{snippet.explanation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <Button variant="outline" onClick={() => setProcessedData(null)}>
+              Process Another Lecture
+            </Button>
+          </div>
         </div>
       )}
 
