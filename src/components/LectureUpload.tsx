@@ -1,16 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, FileType, FilePlus, CheckCircle, AlertCircle, Loader2, Key } from 'lucide-react';
+import { Upload, FileType, FilePlus, CheckCircle, AlertCircle, Loader2, Key, BookOpen, Target, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { transcribeVideo, generateSummary, processPdf, isApiKeySet, setApiKey } from '@/services/aiService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-// Interface for processed lecture data
+// Enhanced interface for processed lecture data
 interface ProcessedLecture {
   transcription: string;
   summary: string;
   keyPoints: string[];
+  topics?: string[];
+  questions?: string[];
+  learningObjectives?: string[];
   codeSnippets?: {
     code: string;
     explanation: string;
@@ -129,7 +135,7 @@ const LectureUpload = () => {
         }
         
         setIsProcessing(false);
-        toast.success('Processing complete! View your lecture summary below.');
+        toast.success('Processing complete! View your comprehensive lecture analysis below.');
       } catch (error) {
         console.error('Processing error:', error);
         setIsProcessing(false);
@@ -144,8 +150,8 @@ const LectureUpload = () => {
       setProcessingStage('Transcribing video...');
       const transcription = await transcribeVideo(videoFile);
       
-      // Step 2: Generate summary with AI
-      setProcessingStage('Generating insights with AI...');
+      // Step 2: Generate comprehensive analysis with AI
+      setProcessingStage('Generating comprehensive analysis with AI...');
       const summaryData = await generateSummary(transcription);
       
       // Set processed data
@@ -153,6 +159,9 @@ const LectureUpload = () => {
         transcription,
         summary: summaryData.summary,
         keyPoints: summaryData.keyPoints,
+        topics: summaryData.topics,
+        questions: summaryData.questions,
+        learningObjectives: summaryData.learningObjectives,
         codeSnippets: summaryData.codeSnippets
       });
     } catch (error) {
@@ -167,8 +176,8 @@ const LectureUpload = () => {
       setProcessingStage('Extracting text from PDF...');
       const pdfText = await processPdf(pdfFile);
       
-      // Generate summary
-      setProcessingStage('Generating insights with AI...');
+      // Generate comprehensive analysis
+      setProcessingStage('Generating comprehensive analysis with AI...');
       const summaryData = await generateSummary(pdfText);
       
       // Set processed data
@@ -176,6 +185,9 @@ const LectureUpload = () => {
         transcription: pdfText,
         summary: summaryData.summary,
         keyPoints: summaryData.keyPoints,
+        topics: summaryData.topics,
+        questions: summaryData.questions,
+        learningObjectives: summaryData.learningObjectives,
         codeSnippets: summaryData.codeSnippets
       });
     } catch (error) {
@@ -195,149 +207,252 @@ const LectureUpload = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-6 text-center">Upload Lecture Material</h2>
-      
-      {/* API Key Dialog */}
-      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>OpenAI API Key Required</DialogTitle>
-            <DialogDescription>
-              To use the AI features for transcription and summarization, please enter your OpenAI API key.
-              This key will be stored locally in your browser.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              value={apiKey}
-              onChange={(e) => setApiKeyState(e.target.value)}
-              placeholder="sk-..."
-              type="password"
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Your API key is stored only in your browser and is never sent to our servers.
-              Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAI</a>.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApiKeyDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleApiKeySave}>
-              Save API Key
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* API Key Button */}
-      <div className="flex justify-end mb-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowApiKeyDialog(true)}
-          className="flex items-center gap-2"
-        >
-          <Key className="h-4 w-4" />
-          Set API Key
-        </Button>
-      </div>
-      
-      <div
-        className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer min-h-[200px] transition-colors ${
-          isDragging ? 'border-academic-blue bg-blue-50' : 'border-gray-300 hover:border-academic-blue'
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => document.getElementById('file-input')?.click()}
-      >
-        {getFileIcon()}
-        
-        <p className="mt-4 text-center text-academic-gray">
-          {file 
-            ? `Selected: ${file.name}` 
-            : 'Drag and drop your lecture video or PDF here, or click to browse'}
-        </p>
-        <p className="mt-2 text-sm text-academic-gray">
-          Supported formats: MP4, WebM, QuickTime, PDF (Max 100MB)
-        </p>
-        
-        <input
-          id="file-input"
-          type="file"
-          className="hidden"
-          accept=".mp4,.pdf,.mov,.webm"
-          onChange={handleFileInput}
-        />
-      </div>
-
-      {file && (
-        <div className="mt-6">
-          {isUploading ? (
-            <>
-              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-                <div 
-                  className="bg-academic-blue h-2.5 rounded-full transition-all duration-200" 
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Upload Lecture Material</CardTitle>
+          <p className="text-academic-gray">
+            Upload videos or PDFs to get comprehensive AI analysis including summaries, key points, topics, and learning objectives.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {/* API Key Dialog */}
+          <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>OpenAI API Key Required</DialogTitle>
+                <DialogDescription>
+                  To use the AI features for transcription and summarization, please enter your OpenAI API key.
+                  This key will be stored locally in your browser.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Input
+                  value={apiKey}
+                  onChange={(e) => setApiKeyState(e.target.value)}
+                  placeholder="sk-..."
+                  type="password"
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your API key is stored only in your browser and is never sent to our servers.
+                  Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAI</a>.
+                </p>
               </div>
-              <p className="text-center text-academic-gray">
-                Uploading... {uploadProgress}%
-              </p>
-            </>
-          ) : isProcessing ? (
-            <div className="flex flex-col items-center justify-center py-4">
-              <Loader2 className="h-8 w-8 text-academic-blue animate-spin mb-2" />
-              <p className="text-center text-academic-gray">{processingStage}</p>
-            </div>
-          ) : (
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowApiKeyDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleApiKeySave}>
+                  Save API Key
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          {/* API Key Button */}
+          <div className="flex justify-end mb-4">
             <Button 
-              className="w-full bg-academic-blue hover:bg-academic-light-blue"
-              onClick={handleUpload}
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowApiKeyDialog(true)}
+              className="flex items-center gap-2"
             >
-              Start Upload & Process
+              <Key className="h-4 w-4" />
+              Set API Key
             </Button>
+          </div>
+          
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer min-h-[200px] transition-colors ${
+              isDragging ? 'border-academic-blue bg-blue-50' : 'border-gray-300 hover:border-academic-blue'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('file-input')?.click()}
+          >
+            {getFileIcon()}
+            
+            <p className="mt-4 text-center text-academic-gray">
+              {file 
+                ? `Selected: ${file.name}` 
+                : 'Drag and drop your lecture video or PDF here, or click to browse'}
+            </p>
+            <p className="mt-2 text-sm text-academic-gray">
+              Supported formats: MP4, WebM, QuickTime, PDF (Max 100MB)
+            </p>
+            
+            <input
+              id="file-input"
+              type="file"
+              className="hidden"
+              accept=".mp4,.pdf,.mov,.webm"
+              onChange={handleFileInput}
+            />
+          </div>
+
+          {file && (
+            <div className="mt-6">
+              {isUploading ? (
+                <>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div 
+                      className="bg-academic-blue h-2.5 rounded-full transition-all duration-200" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-center text-academic-gray">
+                    Uploading... {uploadProgress}%
+                  </p>
+                </>
+              ) : isProcessing ? (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <Loader2 className="h-8 w-8 text-academic-blue animate-spin mb-2" />
+                  <p className="text-center text-academic-gray">{processingStage}</p>
+                </div>
+              ) : (
+                <Button 
+                  className="w-full bg-academic-blue hover:bg-academic-light-blue"
+                  onClick={handleUpload}
+                >
+                  Start Upload & Process
+                </Button>
+              )}
+            </div>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {processedData && (
-        <div className="mt-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
-          <h3 className="text-xl font-semibold mb-4">Lecture Summary</h3>
-          
-          <div className="mb-4">
-            <h4 className="font-medium text-academic-blue mb-2">Summary</h4>
-            <p className="text-academic-gray">{processedData.summary}</p>
+        <div className="space-y-6">
+          {/* Summary Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-academic-blue" />
+                Lecture Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-academic-gray leading-relaxed">{processedData.summary}</p>
+            </CardContent>
+          </Card>
+
+          {/* Key Points Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-academic-green" />
+                Key Points
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {processedData.keyPoints.map((point, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-academic-blue rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-academic-gray">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Topics and Learning Objectives */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {processedData.topics && processedData.topics.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-academic-yellow" />
+                    Main Topics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {processedData.topics.map((topic, index) => (
+                      <Badge key={index} className="bg-academic-light-blue text-academic-blue">
+                        {topic}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {processedData.learningObjectives && processedData.learningObjectives.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-academic-green" />
+                    Learning Objectives
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-1">
+                    {processedData.learningObjectives.map((objective, index) => (
+                      <li key={index} className="text-academic-gray text-sm">
+                        • {objective}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
-          
-          <div className="mb-4">
-            <h4 className="font-medium text-academic-blue mb-2">Key Points</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              {processedData.keyPoints.map((point, index) => (
-                <li key={index} className="text-academic-gray">{point}</li>
-              ))}
-            </ul>
-          </div>
-          
-          {processedData.codeSnippets && processedData.codeSnippets.length > 0 && (
-            <div>
-              <h4 className="font-medium text-academic-blue mb-2">Code Snippets</h4>
-              {processedData.codeSnippets.map((snippet, index) => (
-                <div key={index} className="mb-4 bg-gray-100 p-4 rounded">
-                  <p className="text-sm font-medium text-academic-gray mb-2">{snippet.language}</p>
-                  <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm overflow-x-auto">
-                    {snippet.code}
-                  </pre>
-                  <p className="mt-2 text-academic-gray text-sm">{snippet.explanation}</p>
+
+          {/* Study Questions */}
+          {processedData.questions && processedData.questions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-academic-red" />
+                  Study Questions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {processedData.questions.map((question, index) => (
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                      <p className="font-medium text-academic-blue">Q{index + 1}: {question}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </CardContent>
+            </Card>
           )}
           
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          {/* Code Snippets */}
+          {processedData.codeSnippets && processedData.codeSnippets.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileType className="h-5 w-5 text-academic-green" />
+                  Code Snippets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {processedData.codeSnippets.map((snippet, index) => (
+                    <div key={index} className="border rounded-lg overflow-hidden">
+                      <div className="bg-gray-100 px-4 py-2 border-b">
+                        <span className="text-sm font-medium text-academic-gray">{snippet.language}</span>
+                      </div>
+                      <pre className="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm">
+                        {snippet.code}
+                      </pre>
+                      <div className="p-4 bg-gray-50">
+                        <p className="text-academic-gray text-sm">{snippet.explanation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          <div className="flex justify-center">
             <Button variant="outline" onClick={() => setProcessedData(null)}>
               Process Another Lecture
             </Button>
@@ -345,27 +460,40 @@ const LectureUpload = () => {
         </div>
       )}
 
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">What happens next?</h3>
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <CheckCircle className="h-5 w-5 text-academic-green mt-0.5" />
-            <p className="text-academic-gray">Your video will be transcribed using advanced speech-to-text AI</p>
+      {/* Features Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>What happens next?</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-academic-green mt-0.5 flex-shrink-0" />
+              <p className="text-academic-gray text-sm">AI transcribes your content with high accuracy</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-academic-green mt-0.5 flex-shrink-0" />
+              <p className="text-academic-gray text-sm">Generate comprehensive summaries and key points</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-academic-green mt-0.5 flex-shrink-0" />
+              <p className="text-academic-gray text-sm">Extract main topics and learning objectives</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-academic-green mt-0.5 flex-shrink-0" />
+              <p className="text-academic-gray text-sm">Create study questions for better retention</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-academic-green mt-0.5 flex-shrink-0" />
+              <p className="text-academic-gray text-sm">Identify and explain code snippets</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-academic-green mt-0.5 flex-shrink-0" />
+              <p className="text-academic-gray text-sm">Get structured, searchable learning materials</p>
+            </div>
           </div>
-          <div className="flex items-start gap-3">
-            <CheckCircle className="h-5 w-5 text-academic-green mt-0.5" />
-            <p className="text-academic-gray">Natural language processing will create concise summaries</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <CheckCircle className="h-5 w-5 text-academic-green mt-0.5" />
-            <p className="text-academic-gray">Code snippets will be detected and explained</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <CheckCircle className="h-5 w-5 text-academic-green mt-0.5" />
-            <p className="text-academic-gray">You'll get a structured, searchable version of your lecture</p>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,18 +1,31 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import FeatureCard from '@/components/FeatureCard';
 import LectureUpload from '@/components/LectureUpload';
 import CodeExplainer from '@/components/CodeExplainer';
 import StudyRoom from '@/components/StudyRoom';
+import DocumentQA from '@/components/DocumentQA';
+import ProgrammingExercises from '@/components/ProgrammingExercises';
+import StudyRoomsList from '@/components/StudyRoomsList';
 import { 
   BookText, Code, Users, Brain, BookOpen, GraduationCap, 
-  CheckCircle, Clock, ArrowRight
+  CheckCircle, Clock, ArrowRight, Tabs
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState('lectures');
+
+  const tabs = [
+    { id: 'lectures', label: 'Lecture Summarization', icon: BookText },
+    { id: 'documents', label: 'Document Q&A', icon: Brain },
+    { id: 'code', label: 'Code Learning', icon: Code },
+    { id: 'study-rooms-list', label: 'Study Rooms', icon: Users },
+    { id: 'study-room-demo', label: 'Study Room Demo', icon: Users }
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -42,8 +55,15 @@ const Index = () => {
             />
             
             <FeatureCard
-              title="Code Explanation"
-              description="Get clear explanations for complex programming concepts, regardless of your technical background."
+              title="Document Q&A"
+              description="Upload documents and ask questions to get instant AI-powered answers and explanations."
+              icon={Brain}
+              iconColor="text-academic-red"
+            />
+            
+            <FeatureCard
+              title="Interactive Code Learning"
+              description="Practice programming with FreeCodeCamp-style exercises tailored to your level and interests."
               icon={Code}
               iconColor="text-academic-green"
             />
@@ -53,13 +73,6 @@ const Index = () => {
               description="Join or create study rooms to discuss concepts, share notes, and work together in real-time."
               icon={Users}
               iconColor="text-academic-yellow"
-            />
-            
-            <FeatureCard
-              title="AI Learning Assistant"
-              description="Ask questions, get clarification, and receive personalized learning recommendations."
-              icon={Brain}
-              iconColor="text-academic-red"
             />
           </div>
         </div>
@@ -111,7 +124,7 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Demo Sections */}
+      {/* Interactive Demo Sections */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
@@ -123,22 +136,30 @@ const Index = () => {
             </p>
           </div>
           
-          {/* Lecture Upload Demo */}
-          <div className="mb-20">
-            <h3 className="text-2xl font-semibold mb-6 text-center">Lecture Summarization</h3>
-            <LectureUpload />
+          {/* Tab Navigation */}
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {tabs.map((tab) => (
+              <Button
+                key={tab.id}
+                variant={activeTab === tab.id ? 'default' : 'outline'}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 ${
+                  activeTab === tab.id ? 'bg-academic-blue' : ''
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </Button>
+            ))}
           </div>
           
-          {/* Code Explanation Demo */}
-          <div className="mb-20">
-            <h3 className="text-2xl font-semibold mb-6 text-center">Code Explainer</h3>
-            <CodeExplainer />
-          </div>
-          
-          {/* Study Room Demo */}
-          <div>
-            <h3 className="text-2xl font-semibold mb-6 text-center">Collaborative Study Room</h3>
-            <StudyRoom />
+          {/* Tab Content */}
+          <div className="min-h-[600px]">
+            {activeTab === 'lectures' && <LectureUpload />}
+            {activeTab === 'documents' && <DocumentQA />}
+            {activeTab === 'code' && <ProgrammingExercises />}
+            {activeTab === 'study-rooms-list' && <StudyRoomsList />}
+            {activeTab === 'study-room-demo' && <StudyRoom />}
           </div>
         </div>
       </section>
@@ -185,9 +206,9 @@ const Index = () => {
                 <CheckCircle className="h-5 w-5 text-academic-blue" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold mb-2">Enhance Collaboration</h3>
+                <h3 className="text-xl font-semibold mb-2">Enhanced Learning</h3>
                 <p className="text-academic-gray">
-                  Work together with classmates in real-time, sharing insights and helping each other.
+                  Practice with interactive exercises and get instant feedback on your progress.
                 </p>
               </div>
             </div>
@@ -249,9 +270,9 @@ const Index = () => {
               <h3 className="text-lg font-semibold mb-4">Features</h3>
               <ul className="space-y-2 text-gray-400">
                 <li>Lecture Summarization</li>
-                <li>Code Explanation</li>
+                <li>Document Q&A</li>
+                <li>Interactive Learning</li>
                 <li>Study Rooms</li>
-                <li>AI Learning Assistant</li>
               </ul>
             </div>
             
