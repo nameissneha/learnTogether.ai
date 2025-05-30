@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
@@ -11,7 +10,7 @@ import ProgrammingExercises from '@/components/ProgrammingExercises';
 import StudyRoomsList from '@/components/StudyRoomsList';
 import { 
   BookText, Code, Users, Brain, BookOpen, GraduationCap, 
-  CheckCircle, Clock, ArrowRight, Tabs
+  CheckCircle, Clock, ArrowRight, Layout
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
